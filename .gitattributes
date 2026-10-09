@@ -1,2 +1,3 @@
 # keep the synced core byte for byte (its checksums are tested), also on Windows
 src/core/** -text
+*.csv -text
