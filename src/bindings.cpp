@@ -55,12 +55,12 @@ PYBIND11_MODULE(_core, m) {
   // type is 0-based; edge is n x (len(Rs) - 1). Returns value with shape (n, K, nb) and the presence flags.
   m.def("local_curves", [](DoubleArray x, DoubleArray y, IntArray type, int n_types, std::vector<double> Rs,
                            std::vector<double> label_val, DoubleArray wt, std::vector<double> lam, DoubleArrayF edge,
-                           bool l_function) {
+                           bool l_function, bool include_self) {
     const int n = static_cast<int>(x.size());
     if (edge.ndim() != 2 || edge.shape(0) != n || edge.shape(1) != static_cast<py::ssize_t>(Rs.size()) - 1)
       throw std::invalid_argument("edge must be an (n, len(Rs) - 1) array");
     lisaclust::LocalCurves res = lisaclust::localCurves(x.data(), y.data(), type.data(), n, n_types, Rs, label_val,
-                                                        wt.data(), lam, edge.data(), l_function);
+                                                        wt.data(), lam, edge.data(), l_function, include_self);
     // the core's layout, (k * K + J) * n + i, is a Fortran-order (n, K, nb) array
     py::array_t<double, py::array::f_style> value({static_cast<py::ssize_t>(res.n), static_cast<py::ssize_t>(res.K),
                                                    static_cast<py::ssize_t>(res.nb)});
@@ -76,7 +76,8 @@ PYBIND11_MODULE(_core, m) {
     d["bin"] = flags(res.binPresent);
     d["type"] = flags(res.typePresent);
     return d;
-  });
+  }, py::arg("x"), py::arg("y"), py::arg("type"), py::arg("n_types"), py::arg("Rs"), py::arg("label_val"),
+     py::arg("wt"), py::arg("lam"), py::arg("edge"), py::arg("l_function"), py::arg("include_self") = true);
 
   // labels are 0-based; -1 when there are no training points
   m.def("nearest_labels", [](DoubleArray tx, DoubleArray ty, IntArray label, DoubleArray qx, DoubleArray qy) {

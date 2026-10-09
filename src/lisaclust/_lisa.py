@@ -103,7 +103,7 @@ def local_curves(
 ) -> pd.DataFrame:
     """The LISA of the cells of one image: one row per cell, one column per radius and neighbouring type.
 
-    The equivalent of lisaClust's ``inhomLocalK()``. Columns are named ``<radius>_<type>`` for the radii and types
+    The equivalent of lisaClust's ``inhomLocalK()``. Each cell counts itself among the cells of its type. Columns are named ``<radius>_<type>`` for the radii and types
     that occur among the image's pairs of cells; cells with no neighbour within the largest radius are NaN.
     """
     x, y = np.asarray(x, float), np.asarray(y, float)
@@ -133,6 +133,7 @@ def local_curves(
         lam,
         edge,
         lisa_func == "L",
+        True,
     )
     keep = np.nonzero(res["type"])[0]
     blocks, names = [], []
