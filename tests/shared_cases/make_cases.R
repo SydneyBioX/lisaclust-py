@@ -28,6 +28,18 @@ for (nm in names(cases)) {
   write.csv(data.frame(cellID = rownames(cv), cv, check.names = FALSE), file.path(out_dir, paste0(nm, ".csv")),
             row.names = FALSE)
 }
+# region outlines of image a (lisaClust's hatchingPlot): regions from the cell types
+a <- cells[cells$imageID == "a", ]
+a$region <- ifelse(a$cellType == "tumour", "r1", ifelse(a$cellType %in% c("T", "B"), "r2", "r3"))
+write.csv(a[, c("cellID", "x", "y", "region")], file.path(out_dir, "outline_cells.csv"), row.names = FALSE)
+a <- read.csv(file.path(out_dir, "outline_cells.csv"))
+outlines <- lapply(c(square = "square", convex = "convex"), function(w) {
+  code <- as.numeric(factor(a$region))
+  polys <- lisaClust:::regionPolygons(a$x, a$y, code, lisaClust:::makeWindow(a, w, NULL))
+  setNames(polys[seq_along(levels(factor(a$region)))], levels(factor(a$region)))
+})
+jsonlite::write_json(outlines, file.path(out_dir, "outlines.json"), digits = NA)
+
 jsonlite::write_json(lapply(cases, function(a) list(r = a$r, window = a$window, lisa_func = a$lisaFunc)),
                      file.path(out_dir, "cases.json"), auto_unbox = TRUE, pretty = TRUE)
 cat("wrote", length(cases), "cases with lisaClust", as.character(packageVersion("lisaClust")), "\n")

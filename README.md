@@ -19,6 +19,10 @@ lisaclust.lisa_clust(adata, k=5, r=(20, 50, 100), random_state=0)  # adds adata.
 lisaclust.region_map(adata, plot=True)  # how enriched each cell type is in each region
 
 curves = lisaclust.lisa(adata, r=(20, 50, 100))  # the LISA, one row per cell, for your own clustering
+
+# cells coloured by type, each region outlined by its cells' Voronoi tiles and hatched (needs matplotlib, shapely)
+lisaclust.hatching_plot(adata, use_images=["image1", "image2"])
+outlines = lisaclust.region_polygons(x, y, regions)  # the outlines as shapely polygons, for other plots
 ```
 
 | R (lisaClust) | Python (lisaclust) |
@@ -27,11 +31,14 @@ curves = lisaclust.lisa(adata, r=(20, 50, 100))  # the LISA, one row per cell, f
 | `lisa(cells, r)` | `lisa(cells, r=)` |
 | `inhomLocalK(data, Rs)` | `local_curves(x, y, cell_type, r=)` |
 | `regionMap(cells, type = "bubble")` | `region_map(cells, plot=True)` |
+| `hatchingPlot(cells, useImages)` | `hatching_plot(cells, use_images=)` |
 
 `lisa()` gives the same values as the R package for `window="square"`, and agrees to about 1e-5 for the default
 convex-hull window (R grows the hull by 0.01 with spatstat's rounded dilation). k-means differs between R and
-Python, so regions are numbered differently. Not yet in the Python package: concave windows, `hatchingPlot()`;
-with `sigma`, the density weights approximate spatstat's `density.ppp()` on a pixel grid.
+Python, so regions are numbered differently. Region outlines match the R package's for square and convex windows;
+for the concave window Python uses shapely's concave hull rather than concaveman, so its edge differs slightly.
+Not yet in the Python package: concave windows for `lisa()`; with `sigma`, the density weights approximate
+spatstat's `density.ppp()` on a pixel grid.
 
 ## Development
 

@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "lisaclust"
-version = "1.21.2"
+version = "1.21.3"
 description = "Find tissue domains and cellular niches by clustering local indicators of spatial association (the Python version of the Bioconductor package lisaClust)"
 readme = "README.md"
 license = "GPL-2.0-or-later"
@@ -23,8 +23,8 @@ dependencies = ["numpy>=1.23", "pandas>=1.5", "scipy>=1.9", "scikit-learn>=1.1"]
 
 [project.optional-dependencies]
 anndata = ["anndata>=0.10"]
-plot = ["matplotlib>=3.7"]
-test = ["pytest>=7", "anndata>=0.10", "matplotlib>=3.7"]
+plot = ["matplotlib>=3.7", "shapely>=2.0"]
+test = ["pytest>=7", "anndata>=0.10", "matplotlib>=3.7", "shapely>=2.0"]
 
 [project.urls]
 Source = "https://github.com/SydneyBioX/lisaclust-py"
