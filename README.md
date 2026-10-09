@@ -18,6 +18,11 @@ import lisaclust
 lisaclust.lisa_clust(adata, k=5, r=(20, 50, 100), random_state=0)  # adds adata.obs["region"]
 lisaclust.region_map(adata, plot=True)  # how enriched each cell type is in each region
 
+# name regions by the marker each is most enriched for; regions with the same marker merge into one domain
+lisaclust.name_regions(adata, {"tumour": "Keratin_Tumour", "T cell": "CD8_T_cell"}, key_added="domain")
+# share of each domain per patient (images pooled), by group
+lisaclust.region_box_plot(adata, condition="group", region="domain", image_id="patient")
+
 curves = lisaclust.lisa(adata, r=(20, 50, 100))  # the LISA, one row per cell, for your own clustering
 
 # cells coloured by type, each region outlined by its cells' Voronoi tiles and hatched (needs matplotlib, shapely)
@@ -31,6 +36,9 @@ outlines = lisaclust.region_polygons(x, y, regions)  # the outlines as shapely p
 | `lisa(cells, r)` | `lisa(cells, r=)` |
 | `inhomLocalK(data, Rs)` | `local_curves(x, y, cell_type, r=)` |
 | `regionMap(cells, type = "bubble")` | `region_map(cells, plot=True)` |
+| `regionMap(cells, type = "table")` | `region_map(cells)` |
+| `nameRegions(cells, markers, regionName =)` | `name_regions(cells, markers, key_added=)` |
+| `regionBoxPlot(cells, condition, imageID =)` | `region_box_plot(cells, condition, image_id=)` |
 | `hatchingPlot(cells, useImages)` | `hatching_plot(cells, use_images=)` |
 
 `lisa()` gives the same values as the R package for `window="square"`, and agrees to about 1e-5 for the default
