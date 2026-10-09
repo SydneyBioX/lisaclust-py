@@ -59,3 +59,16 @@ def test_hatching_plot_draws():
     assert any(p.get_hatch() for p in axes[0].patches)
     axes[0].figure.savefig(Path(__file__).parent / "hatching_test.png")
     (Path(__file__).parent / "hatching_test.png").unlink()
+
+
+def test_twelve_hatchings():
+    rng = np.random.default_rng(3)
+    n = 3000
+    d = pd.DataFrame({"x": rng.uniform(0, 400, n), "y": rng.uniform(0, 300, n), "imageID": "a", "cellType": "c"})
+    d["region"] = [f"region_{int(y // 100) * 4 + int(x // 100) + 1:02d}" for x, y in zip(d["x"], d["y"], strict=True)]
+    axes = lisaclust.hatching_plot(d, window="square")
+    hatches = sorted({p.get_hatch() or "" for p in axes[0].patches})
+    assert hatches == sorted(lisaclust._plots.HATCHES)
+    d.loc[d["x"] > 390, "region"] = "region_13"
+    with pytest.warns(UserWarning, match="more than 12 regions"):
+        lisaclust.hatching_plot(d, window="square")

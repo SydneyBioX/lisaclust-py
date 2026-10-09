@@ -16,8 +16,8 @@ import pandas as pd
 from . import _core
 from ._input import format_cells
 
-# lisaClust's seven hatchings: none, /, \, -, |, x and +
-HATCHES = ["", "/", "\\", "-", "|", "x", "+"]
+# lisaClust's twelve hatchings: none, /, \, -, |, x, +, dots, circles, / with dots, \ with dots and - with dots
+HATCHES = ["", "/", "\\", "-", "|", "x", "+", ".", "o", "/.", "\\.", "-."]
 
 _CACHE: OrderedDict = OrderedDict()
 _CACHE_SIZE = 20
@@ -163,7 +163,8 @@ def hatching_plot(
     r"""Plot cells coloured by type, with each region outlined and hatched, one panel per image.
 
     The equivalent of lisaClust's ``hatchingPlot()``. Regions get, in order, no hatching, ``/``, ``\``, ``-``,
-    ``|``, ``x`` and ``+``; regions beyond the seventh are drawn as the first.
+    ``|``, ``x``, ``+``, dots, circles, ``/`` with dots, ``\`` with dots and ``-`` with dots; regions beyond the
+    twelfth are drawn as the first.
 
     Parameters
     ----------
@@ -210,7 +211,8 @@ def hatching_plot(
     regions = sorted(pd.unique(df["region"]), key=str)
     if len(regions) > len(HATCHES):
         warnings.warn(
-            "Can not plot more than 7 regions. Regions after the seventh are drawn as the first.", stacklevel=2
+            f"Can not plot more than {len(HATCHES)} regions. Regions after the {len(HATCHES)}th are drawn as the first.",
+            stacklevel=2,
         )
     hatch = {r: HATCHES[i] if i < len(HATCHES) else HATCHES[0] for i, r in enumerate(regions)}
     types = list(df["cellType"].cat.categories)
