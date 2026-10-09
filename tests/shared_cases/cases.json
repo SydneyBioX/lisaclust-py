@@ -1,0 +1,22 @@
+{
+  "square_K": {
+    "r": [10, 25, 50],
+    "window": "square",
+    "lisa_func": "K"
+  },
+  "square_L": {
+    "r": [15, 40],
+    "window": "square",
+    "lisa_func": "L"
+  },
+  "convex_K": {
+    "r": [10, 25, 50],
+    "window": "convex",
+    "lisa_func": "K"
+  },
+  "large_r": {
+    "r": [20, 80, 500],
+    "window": "square",
+    "lisa_func": "K"
+  }
+}

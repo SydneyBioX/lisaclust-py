@@ -1,0 +1,47 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "pybind11>=2.12"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "lisaclust"
+version = "1.21.1"
+description = "Find tissue domains and cellular niches by clustering local indicators of spatial association (the Python version of the Bioconductor package lisaClust)"
+readme = "README.md"
+license = "GPL-2.0-or-later"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [
+  { name = "Ellis Patrick", email = "ellis.patrick@sydney.edu.au" },
+  { name = "Nicolas Canete" },
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: C++",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = ["numpy>=1.23", "pandas>=1.5", "scipy>=1.9", "scikit-learn>=1.1"]
+
+[project.optional-dependencies]
+anndata = ["anndata>=0.10"]
+plot = ["matplotlib>=3.7"]
+test = ["pytest>=7", "anndata>=0.10", "matplotlib>=3.7"]
+
+[project.urls]
+Source = "https://github.com/SydneyBioX/lisaClust"
+
+[tool.scikit-build]
+wheel.packages = ["src/lisaclust"]
+cmake.build-type = "Release"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# lint rules of the scverse cookiecutter template (https://github.com/scverse/cookiecutter-scverse)
+[tool.ruff]
+line-length = 120
+src = ["src"]
+lint.select = ["B", "BLE", "C4", "D", "E", "F", "I", "RUF100", "TID", "UP", "W"]
+lint.ignore = ["B008", "D100", "D104", "D105", "D107", "D203", "D213", "D400", "D401", "E501", "E731", "E741"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
