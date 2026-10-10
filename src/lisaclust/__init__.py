@@ -7,7 +7,7 @@ from ._lisa import lisa, lisa_clust, local_curves, region_map
 from ._plots import hatching_plot, region_polygons
 from ._regions import name_regions, region_box_plot, region_shares
 
-__version__ = "1.21.5"
+__version__ = "1.21.7"
 __all__ = [
     "hatching_plot",
     "lisa",

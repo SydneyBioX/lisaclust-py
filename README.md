@@ -43,8 +43,8 @@ outlines = lisaclust.region_polygons(x, y, regions)  # the outlines as shapely p
 
 `lisa()` gives the same values as the R package for `window="square"`, and agrees to about 1e-5 for the default
 convex-hull window (R grows the hull by 0.01 with spatstat's rounded dilation). k-means differs between R and
-Python, so regions are numbered differently. Region outlines match the R package's for square and convex windows;
-for the concave window Python uses shapely's concave hull rather than concaveman, so its edge differs slightly.
+Python, so regions are numbered differently. Region outlines match the R package's for square, convex and concave
+windows (the concave window is concaveman's concave hull, computed by the same C++ code in both packages).
 Not yet in the Python package: concave windows for `lisa()`; with `sigma`, the density weights approximate
 spatstat's `density.ppp()` on a pixel grid.
 

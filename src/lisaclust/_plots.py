@@ -32,18 +32,15 @@ def _window(x, y, window="concave", window_length=None):
     if window == "convex":
         return shapely.Polygon(_core.convex_hull(x, y))
     if window == "concave":
-        # lisaClust surrounds each cell by 8 points at distance (x range) / n and wraps them with concaveman;
-        # here shapely's concave hull of the same points, with its edge length limited the same way.
+        # each cell and its 8 neighbours at distance (x range) / n, wrapped by concaveman's concave hull (the C++
+        # port in the core, the same polygon as concaveman::concaveman() in R)
         span = x.max() - x.min()
-        length = span / 20 * (1 if window_length is None else window_length)
+        length = span / 20 if window_length is None else span / 20 * window_length
         d = span / len(x)
         ox = np.array([0, 1, 0, -1, -1, 0, 1, -1, 1]) * d
         oy = np.array([0, 1, 1, 1, -1, -1, -1, 0, 0]) * d
-        pts = np.column_stack([(x[:, None] + ox).ravel(), (y[:, None] + oy).ravel()])
-        hull = shapely.convex_hull(shapely.MultiPoint(pts))
-        ratio = min(1.0, length / max(np.sqrt(hull.area), 1e-12))
-        w = shapely.concave_hull(shapely.MultiPoint(pts), ratio=ratio)
-        return w if w.area > 0 else hull
+        ring = _core.concave_hull((x[:, None] + ox).ravel(), (y[:, None] + oy).ravel(), 1.0, length)
+        return shapely.Polygon(ring[::-1])
     raise ValueError("window must be 'square', 'convex' or 'concave'.")
 
 

@@ -24,7 +24,7 @@ def r_outline(rings):
     return geom
 
 
-@pytest.mark.parametrize("window", ["square", "convex"])
+@pytest.mark.parametrize("window", ["square", "convex", "concave"])
 def test_outlines_match_r(window):
     cells = pd.read_csv(HERE / "outline_cells.csv")
     expected = json.loads((HERE / "outlines.json").read_text())[window]
@@ -72,3 +72,11 @@ def test_twelve_hatchings():
     d.loc[d["x"] > 390, "region"] = "region_13"
     with pytest.warns(UserWarning, match="more than 12 regions"):
         lisaclust.hatching_plot(d, window="square")
+
+
+def test_concave_hull_matches_concaveman():
+    # polygons from concaveman::concaveman() 1.2.0 in R (lisaClust's tests/testthat/concaveman_reference.rds)
+    ref = json.loads((HERE / "concaveman_reference.json").read_text())
+    for case, r in ref.items():
+        got = lisaclust._core.concave_hull(np.array(r["x"]), np.array(r["y"]), r["concavity"], r["length_threshold"])
+        np.testing.assert_array_equal(got, np.array(r["polygon"]), err_msg=case)

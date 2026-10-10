@@ -4,11 +4,11 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "lisaclust"
-version = "1.21.5"
+version = "1.21.7"
 description = "Find tissue domains and cellular niches by clustering local indicators of spatial association (the Python version of the Bioconductor package lisaClust)"
 readme = "README.md"
 license = "GPL-2.0-or-later"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "COPYRIGHTS"]
 requires-python = ">=3.10"
 authors = [
   { name = "Ellis Patrick", email = "ellis.patrick@sydney.edu.au" },

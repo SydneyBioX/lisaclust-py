@@ -4,8 +4,10 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <array>
 #include <vector>
 
+#include "lisaclust/concaveman.hpp"
 #include "lisaclust/core.hpp"
 
 namespace py = pybind11;
@@ -49,6 +51,17 @@ PYBIND11_MODULE(_core, m) {
     py::array_t<double> out({static_cast<py::ssize_t>(h.size()), static_cast<py::ssize_t>(2)});
     auto o = out.mutable_unchecked<2>();
     for (std::size_t i = 0; i < h.size(); ++i) { o(i, 0) = h[i].x; o(i, 1) = h[i].y; }
+    return out;
+  });
+
+  // concaveman's concave hull, as concaveman::concaveman() in R: a closed ring, the first point repeated at the end
+  m.def("concave_hull", [](DoubleArray x, DoubleArray y, double concavity, double length_threshold) {
+    std::vector<std::array<double, 2>> h = concaveman::concaveman_r(
+        std::vector<double>(x.data(), x.data() + x.size()), std::vector<double>(y.data(), y.data() + y.size()),
+        concavity, length_threshold);
+    py::array_t<double> out({static_cast<py::ssize_t>(h.size()), static_cast<py::ssize_t>(2)});
+    auto o = out.mutable_unchecked<2>();
+    for (std::size_t i = 0; i < h.size(); ++i) { o(i, 0) = h[i][0]; o(i, 1) = h[i][1]; }
     return out;
   });
 
