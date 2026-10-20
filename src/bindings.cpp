@@ -29,6 +29,24 @@ std::vector<lisaclust::Ring> toRings(const std::vector<DoubleArray>& rings) {
   return win;
 }
 
+// The core's layout, (k * K + J) * n + i, is a Fortran-order (n, K, nb) array; with the presence flags.
+py::dict curvesDict(const lisaclust::LocalCurves& res) {
+  py::array_t<double, py::array::f_style> value({static_cast<py::ssize_t>(res.n), static_cast<py::ssize_t>(res.K),
+                                                 static_cast<py::ssize_t>(res.nb)});
+  std::copy(res.value.begin(), res.value.end(), value.mutable_data());
+  auto flags = [](const std::vector<char>& v) {
+    py::array_t<bool> a(v.size());
+    for (std::size_t i = 0; i < v.size(); ++i) a.mutable_data()[i] = v[i] != 0;
+    return a;
+  };
+  py::dict d;
+  d["value"] = value;
+  d["cell"] = flags(res.cellPresent);
+  d["bin"] = flags(res.binPresent);
+  d["type"] = flags(res.typePresent);
+  return d;
+}
+
 }  // namespace
 
 PYBIND11_MODULE(_core, m) {
@@ -74,23 +92,28 @@ PYBIND11_MODULE(_core, m) {
       throw std::invalid_argument("edge must be an (n, len(Rs) - 1) array");
     lisaclust::LocalCurves res = lisaclust::localCurves(x.data(), y.data(), type.data(), n, n_types, Rs, label_val,
                                                         wt.data(), lam, edge.data(), l_function, include_self);
-    // the core's layout, (k * K + J) * n + i, is a Fortran-order (n, K, nb) array
-    py::array_t<double, py::array::f_style> value({static_cast<py::ssize_t>(res.n), static_cast<py::ssize_t>(res.K),
-                                                   static_cast<py::ssize_t>(res.nb)});
-    std::copy(res.value.begin(), res.value.end(), value.mutable_data());
-    auto flags = [](const std::vector<char>& v) {
-      py::array_t<bool> a(v.size());
-      for (std::size_t i = 0; i < v.size(); ++i) a.mutable_data()[i] = v[i] != 0;
-      return a;
-    };
-    py::dict d;
-    d["value"] = value;
-    d["cell"] = flags(res.cellPresent);
-    d["bin"] = flags(res.binPresent);
-    d["type"] = flags(res.typePresent);
-    return d;
+    return curvesDict(res);
   }, py::arg("x"), py::arg("y"), py::arg("type"), py::arg("n_types"), py::arg("Rs"), py::arg("label_val"),
      py::arg("wt"), py::arg("lam"), py::arg("edge"), py::arg("l_function"), py::arg("include_self") = true);
+
+  // Soft membership: cell i's labels (0-based) are mem_lab[ptr[i]:ptr[i + 1]] with weights mem_w; lam is each
+  // label's summed weight per unit area. Returns as local_curves(), with shape (n, n_labels, nb).
+  m.def("local_curves_weighted", [](DoubleArray x, DoubleArray y, IntArray ptr, IntArray mem_lab, DoubleArray mem_w,
+                                    int n_labels, std::vector<double> Rs, std::vector<double> label_val,
+                                    DoubleArray wt, std::vector<double> lam, DoubleArrayF edge, bool l_function,
+                                    bool include_self) {
+    const int n = static_cast<int>(x.size());
+    if (edge.ndim() != 2 || edge.shape(0) != n || edge.shape(1) != static_cast<py::ssize_t>(Rs.size()) - 1)
+      throw std::invalid_argument("edge must be an (n, len(Rs) - 1) array");
+    if (ptr.size() != n + 1 || mem_lab.size() != mem_w.size() || ptr.data()[n] != mem_lab.size())
+      throw std::invalid_argument("ptr must have n + 1 entries ending at len(mem_lab) == len(mem_w)");
+    lisaclust::LocalCurves res = lisaclust::localCurvesWeighted(
+        x.data(), y.data(), ptr.data(), mem_lab.data(), mem_w.data(), n, n_labels, Rs, label_val, wt.data(), lam,
+        edge.data(), l_function, include_self);
+    return curvesDict(res);
+  }, py::arg("x"), py::arg("y"), py::arg("ptr"), py::arg("mem_lab"), py::arg("mem_w"), py::arg("n_labels"),
+     py::arg("Rs"), py::arg("label_val"), py::arg("wt"), py::arg("lam"), py::arg("edge"), py::arg("l_function"),
+     py::arg("include_self") = true);
 
   // labels are 0-based; -1 when there are no training points
   m.def("nearest_labels", [](DoubleArray tx, DoubleArray ty, IntArray label, DoubleArray qx, DoubleArray qy) {

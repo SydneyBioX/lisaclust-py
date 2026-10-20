@@ -1,6 +1,6 @@
 ## Shared test cases: lisaClust (R) computes the expected results; the Python tests (tests/test_shared_cases.py)
 ## must reproduce them. Rerun after any change to the core or to either front end:
-##   Rscript tests/shared_cases/make_cases.R      (needs lisaClust >= 1.21.7)
+##   Rscript tests/shared_cases/make_cases.R      (needs lisaClust >= 1.21.8)
 suppressPackageStartupMessages(library(lisaClust))
 out_dir <- file.path("tests", "shared_cases")
 set.seed(20261009)
@@ -28,6 +28,19 @@ for (nm in names(cases)) {
   write.csv(data.frame(cellID = rownames(cv), cv, check.names = FALSE), file.path(out_dir, paste0(nm, ".csv")),
             row.names = FALSE)
 }
+# soft cell type membership (lisa(cellWeights =)): a weight for each type, and an overlapping "immune" label
+set.seed(20261020)
+types <- levels(cells$cellType)
+W <- matrix(round(runif(nrow(cells) * length(types)) * 0.3, 3), nrow(cells), dimnames = list(NULL, types))
+W[W < 0.1] <- 0
+W[cbind(seq_len(nrow(cells)), as.integer(cells$cellType))] <- round(runif(nrow(cells), 0.5, 1), 3)
+W <- cbind(W, immune = rowSums(W[, c("T", "B", "macro")]))
+write.csv(data.frame(cellID = cells$cellID, W, check.names = FALSE), file.path(out_dir, "weights.csv"),
+          row.names = FALSE)
+W <- as.matrix(read.csv(file.path(out_dir, "weights.csv"), check.names = FALSE)[, -1])
+cv <- suppressMessages(lisa(cells, r = c(10, 25, 50), window = "square", lisaFunc = "K", cellWeights = W))
+write.csv(data.frame(cellID = rownames(cv), cv, check.names = FALSE), file.path(out_dir, "soft_K.csv"),
+          row.names = FALSE)
 # region outlines of image a (lisaClust's hatchingPlot): regions from the cell types
 a <- cells[cells$imageID == "a", ]
 a$region <- ifelse(a$cellType == "tumour", "r1", ifelse(a$cellType %in% c("T", "B"), "r2", "r3"))

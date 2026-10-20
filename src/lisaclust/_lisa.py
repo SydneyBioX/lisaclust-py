@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from . import _core
-from ._input import format_cells
+from ._input import format_cells, format_weights
 
 
 def _ring_area(ring: np.ndarray) -> float:
@@ -99,12 +99,23 @@ def _label(v: float) -> str:
 
 
 def local_curves(
-    x, y, cell_type, r=(20, 50, 100), sigma=None, window="convex", min_lambda=0.05, lisa_func="K", cell_ids=None
+    x,
+    y,
+    cell_type,
+    r=(20, 50, 100),
+    sigma=None,
+    window="convex",
+    min_lambda=0.05,
+    lisa_func="K",
+    cell_ids=None,
+    membership=None,
 ) -> pd.DataFrame:
     """The LISA of the cells of one image: one row per cell, one column per radius and neighbouring type.
 
     The equivalent of lisaClust's ``inhomLocalK()``. Each cell counts itself among the cells of its type. Columns are named ``<radius>_<type>`` for the radii and types
     that occur among the image's pairs of cells; cells with no neighbour within the largest radius are NaN.
+    ``membership`` (soft cell type membership) is a pair of a CSR matrix of the cells' weights, one row per cell,
+    and its labels; the columns are then one per radius and label.
     """
     x, y = np.asarray(x, float), np.asarray(y, float)
     ct = pd.Categorical(cell_type)
@@ -122,24 +133,45 @@ def local_curves(
         inb = dist < R
         if inb.any():
             edge[inb, k] = _core.disc_window_area(x[inb], y[inb], R, 128, rings) / (np.pi * R**2)
-    res = _core.local_curves(
-        x,
-        y,
-        ct.codes.astype(np.int32),
-        len(ct.categories),
-        Rs,
-        [float(v) for v in labels],
-        wt,
-        lam,
-        edge,
-        lisa_func == "L",
-        True,
-    )
+    if membership is None:
+        res = _core.local_curves(
+            x,
+            y,
+            ct.codes.astype(np.int32),
+            len(ct.categories),
+            Rs,
+            [float(v) for v in labels],
+            wt,
+            lam,
+            edge,
+            lisa_func == "L",
+            True,
+        )
+        label_names = list(ct.categories)
+    else:
+        # soft membership: one curve per label, a label's density its summed weight
+        m, label_names = membership
+        lam = (np.asarray(m.sum(axis=0)).ravel() / area).tolist()
+        res = _core.local_curves_weighted(
+            x,
+            y,
+            m.indptr.astype(np.int32),
+            m.indices.astype(np.int32),
+            m.data.astype(float),
+            len(label_names),
+            Rs,
+            [float(v) for v in labels],
+            wt,
+            lam,
+            edge,
+            lisa_func == "L",
+            True,
+        )
     keep = np.nonzero(res["type"])[0]
     blocks, names = [], []
     for k in np.nonzero(res["bin"])[0]:
         blocks.append(res["value"][:, keep, k])
-        names += [f"{labels[k]}_{ct.categories[j]}" for j in keep]
+        names += [f"{labels[k]}_{label_names[j]}" for j in keep]
     values = np.hstack(blocks) if blocks else np.empty((n, 0))
     values[~res["cell"], :] = np.nan
     return pd.DataFrame(values, columns=names, index=cell_ids)
@@ -156,6 +188,8 @@ def lisa(
     lisa_func="K",
     min_lambda=0.05,
     n_jobs=1,
+    cell_weights=None,
+    weight_labels=None,
 ) -> pd.DataFrame:
     """Local indicators of spatial association for every cell.
 
@@ -177,18 +211,36 @@ def lisa(
         The smallest relative density used when weighting by density.
     n_jobs
         Images computed in parallel.
+    cell_weights
+        Optional cell weights in [0, 1], in the order of the cells: a 1-D array with one weight per cell for its own
+        cell type (for example a quality score), or a cells x labels matrix of soft cell type membership (for example
+        a classifier's confidence; a DataFrame, whose columns are the labels, or a numpy array or scipy sparse matrix
+        with ``weight_labels``). A 1-D array (numpy array, list or pandas Series, taken by position) is the same as
+        the cells x cell types matrix with each cell's weight in its own type's column. The curves are then one per
+        label: each neighbour counts towards a label in proportion to its weight, and a label's density is its
+        summed weight per unit area. Labels may overlap, for example a group and its subtypes. Weights of 1 give the
+        curves of the cell types.
+    weight_labels
+        The labels of the columns of ``cell_weights`` when it is a 2-D numpy array or sparse matrix.
 
     Returns
     -------
-    A DataFrame with a row per cell, in the order of ``cells``, and a column per radius and cell type (``<radius>_<type>``).
+    A DataFrame with a row per cell, in the order of ``cells``, and a column per radius and cell type (``<radius>_<type>``),
+    or per radius and label with a matrix of ``cell_weights``.
     Combinations that do not occur in an image are 0.
 
     """
     df = format_cells(cells, image_id, cell_type, spatial_coords)
     types = df["cellType"].cat.categories
+    weights = None
+    if cell_weights is not None:
+        weights, wlabels = format_weights(cell_weights, len(df), weight_labels, df["cellType"])
 
     def one(idx):
         d = df.iloc[idx]
+        membership = None
+        if weights is not None:
+            membership = (weights[idx], wlabels)
         return local_curves(
             d["x"].to_numpy(),
             d["y"].to_numpy(),
@@ -199,6 +251,7 @@ def lisa(
             min_lambda,
             lisa_func,
             cell_ids=d.index,
+            membership=membership,
         )
 
     groups = list(df.groupby("imageID", observed=True, sort=False).indices.values())
@@ -211,16 +264,19 @@ def lisa(
     return out.loc[df.index]
 
 
-def lisa_clust(cells, k=2, key_added="region", random_state=None, n_init=1, **kwargs):
+def lisa_clust(
+    cells, k=2, key_added="region", random_state=None, n_init=1, cell_weights=None, weight_labels=None, **kwargs
+):
     """Cluster the cells' LISA into ``k`` regions with k-means.
 
     Regions are named ``region_1`` to ``region_k``. For an AnnData object they are added to ``obs[key_added]``
-    (in place, and the object is returned); for a DataFrame a copy with a ``key_added`` column is returned. Other
-    arguments go to :func:`lisa`.
+    (in place, and the object is returned); for a DataFrame a copy with a ``key_added`` column is returned.
+    ``cell_weights`` (a weight per cell, or soft cell type membership with one row per cell, in the order of
+    ``cells``) and other arguments go to :func:`lisa`.
     """
     from sklearn.cluster import KMeans
 
-    curves = lisa(cells, **kwargs)
+    curves = lisa(cells, cell_weights=cell_weights, weight_labels=weight_labels, **kwargs)
     km = KMeans(n_clusters=k, n_init=n_init, random_state=random_state).fit(curves.to_numpy())
     regions = pd.Categorical([f"region_{c + 1}" for c in km.labels_], categories=[f"region_{c + 1}" for c in range(k)])
     if type(cells).__name__ == "AnnData":
