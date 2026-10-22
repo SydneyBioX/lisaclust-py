@@ -52,3 +52,13 @@ def test_region_shares_include_zeros():
 def test_region_box_plot_draws_one_panel_per_region():
     assert len(lisaclust.region_box_plot(toy(), "group")) == 3
     assert len(lisaclust.region_box_plot(toy(), "group", regions=["r1"])) == 1
+
+
+def test_subject_pools_each_patients_images():
+    cells = toy().assign(patient=["p1"] * 8 + ["p2"] * 4)  # images a and b are patient p1's
+    s = lisaclust.region_shares(cells, "group", subject="patient")
+    pd.testing.assert_frame_equal(s, lisaclust.region_shares(cells, "group", image_id="patient"))
+    assert set(s["unit"]) == {"p1", "p2"}
+    assert s.loc[(s["unit"] == "p1") & (s["region"] == "r1"), "share"].item() == pytest.approx(4 / 8)
+    axes = lisaclust.region_box_plot(cells, "group", subject="patient")
+    assert len(axes) == 3

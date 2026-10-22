@@ -60,11 +60,14 @@ def name_regions(cells, markers, region="region", cell_type="cellType", key_adde
     return out
 
 
-def region_shares(cells, condition, region="region", image_id="imageID"):
+def region_shares(cells, condition, region="region", image_id="imageID", subject=None):
     """The share of each region in each image (or patient), with its group: one row per unit and region.
 
-    A unit with no cells in a region has a share of zero.
+    A unit with no cells in a region has a share of zero. With ``subject``, the units are the patients, each
+    patient's images pooled.
     """
+    if subject is not None:
+        image_id = subject  # the unit: the patient, all images pooled, or else the image
     obs = _obs(cells, [image_id, condition, region])
     units = obs[[image_id, condition]].drop_duplicates()
     if units[image_id].duplicated().any():
@@ -77,11 +80,11 @@ def region_shares(cells, condition, region="region", image_id="imageID"):
     return shares.dropna(subset=["condition"]).reset_index(drop=True)
 
 
-def region_box_plot(cells, condition, region="region", image_id="imageID", regions=None, axes=None):
+def region_box_plot(cells, condition, region="region", image_id="imageID", subject=None, regions=None, axes=None):
     """Box plots of the share of each region in each image, by group, one panel per region.
 
-    The equivalent of lisaClust's ``regionBoxPlot()``. With ``image_id`` set to a patient column, the images of
-    each patient are pooled, so each patient gives one share of each region.
+    The equivalent of lisaClust's ``regionBoxPlot()``. With ``subject``, the images of each patient are pooled, so
+    each patient gives one share of each region.
 
     Parameters
     ----------
@@ -90,7 +93,10 @@ def region_box_plot(cells, condition, region="region", image_id="imageID", regio
     condition
         The column of the group of each image (or patient).
     region, image_id
-        The columns of the regions and of the units compared (images, or patients).
+        The columns of the regions and of the images.
+    subject
+        Optional: the column of the patient. The shares are then those of each patient's cells, all images pooled,
+        one point per patient.
     regions
         The regions to show; all by default.
     axes
@@ -103,7 +109,7 @@ def region_box_plot(cells, condition, region="region", image_id="imageID", regio
     """
     import matplotlib.pyplot as plt
 
-    shares = region_shares(cells, condition, region, image_id)
+    shares = region_shares(cells, condition, region, image_id, subject)
     shown = list(regions) if regions is not None else sorted(shares["region"].unique())
     groups = sorted(shares["condition"].unique(), key=str)
     if axes is None:

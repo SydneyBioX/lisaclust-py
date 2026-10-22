@@ -21,7 +21,7 @@ lisaclust.region_map(adata, plot=True)  # how enriched each cell type is in each
 # name regions by the marker each is most enriched for; regions with the same marker merge into one domain
 lisaclust.name_regions(adata, {"tumour": "Keratin_Tumour", "T cell": "CD8_T_cell"}, key_added="domain")
 # share of each domain per patient (images pooled), by group
-lisaclust.region_box_plot(adata, condition="group", region="domain", image_id="patient")
+lisaclust.region_box_plot(adata, condition="group", region="domain", subject="patient")
 
 curves = lisaclust.lisa(adata, r=(20, 50, 100))  # the LISA, one row per cell, for your own clustering
 
@@ -38,7 +38,7 @@ outlines = lisaclust.region_polygons(x, y, regions)  # the outlines as shapely p
 | `regionMap(cells, type = "bubble")` | `region_map(cells, plot=True)` |
 | `regionMap(cells, type = "table")` | `region_map(cells)` |
 | `nameRegions(cells, markers, regionName =)` | `name_regions(cells, markers, key_added=)` |
-| `regionBoxPlot(cells, condition, imageID =)` | `region_box_plot(cells, condition, image_id=)` |
+| `regionBoxPlot(cells, condition, subject =)` | `region_box_plot(cells, condition, subject=)` |
 | `hatchingPlot(cells, useImages)` | `hatching_plot(cells, use_images=)` |
 
 `lisa()` gives the same values as the R package for `window="square"`, and agrees to about 1e-5 for the default
